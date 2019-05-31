@@ -1,0 +1,107 @@
+load_file("nrngui.hoc")
+cvode_active(1)
+celsius=34
+create soma
+diam=2
+L=3.5
+
+Vrest=-80
+tstop=2000
+
+objref stim[20], a
+forall{	insert pas cm=1  e_pas=-65 Ra=150 g_pas=1/30000
+		
+	insert naxj  ena = 50 gbar_naxj=0.12
+        insert kdr  ek = -80 gkdrbar_kdr=0.001
+	insert kap gkabar_kap=0.01
+	insert kmb  sh_kmb=-30 gbar_kmb=0.005
+	insert can gcanbar_can = 0.6
+	insert cacum tau_cacum=500
+	insert kir gkbar_kir=0.021
+	
+}
+
+proc init() {
+	t=0
+        forall {
+        v=Vrest
+        if (ismembrane("naxj") || ismembrane("na3")) {ena=55}
+        if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-80}
+        if (ismembrane("hd") ) {ehd_hd=-30}
+	}
+	finitialize(Vrest)
+        fcurrent()
+
+	cvode.re_init()
+	cvode.event(tstop)
+}
+
+
+for i=0, 19 {
+	    stim[i] = new IClamp(0.5)
+	    stim[i].del=100+20*i
+	    stim[i].dur = 0.35
+	    stim[i].amp=0.0
+}
+
+proc Single_AP(){
+	for i=1,19 {stim[i].amp=0.0}
+	stim[0].amp=0.03
+	gbar_kmb=0.005
+	Graph[0].erase_all()
+	Graph[0].size(98,106,-80,20)
+	Graph[1].size(0,2000,0,0.13)
+	Graph[0].exec_menu("Keep Lines")
+	Graph[1].exec_menu("Keep Lines")
+	Graph[0].erase_all()
+	Graph[0].addvar("v(.5)",1,1)
+	Graph[1].addvar("soma.cai( 0.5 )",1,1)
+	run()
+	gbar_kmb=0.00
+	Graph[0].exec_menu("Keep Lines")
+	Graph[1].exec_menu("Keep Lines")
+	Graph[0].addvar("v(.5)",2,1)
+	Graph[1].addvar("soma.cai( 0.5 )",2,1)
+	run()
+	gcanbar_can=0.0
+	Graph[0].exec_menu("Keep Lines")
+	Graph[1].exec_menu("Keep Lines")
+	Graph[0].addvar("v(.5)",3,1)
+	Graph[1].addvar("soma.cai( 0.5 )",3,1)
+	run()
+	gbar_kmb=0.005
+	gcanbar_can=0.6
+}
+
+proc Train(){
+	for i=1,19 {stim[i].amp=0.03}
+	gbar_kmb=0.005
+	Graph[0].erase_all()
+	Graph[0].size(0,600,-80,20)
+	Graph[0].exec_menu("Keep Lines")
+	Graph[1].erase_all()
+	Graph[0].addvar("v(.5)",1,1)
+	run()
+	gbar_kmb=0.00
+	Graph[0].exec_menu("Keep Lines")
+	Graph[0].addvar("v(.5)",2,1)
+	Graph[1].erase_all()
+	run()
+	gcanbar_can=0.0
+	Graph[0].exec_menu("Keep Lines")
+	Graph[0].addvar("v(.5)",3,1)
+	Graph[1].erase_all()
+	run()
+	gbar_kmb=0.005
+	gcanbar_can=0.6
+}
+a = new VBox()
+a.intercept(1)
+xpanel("Protocols",0)
+xbutton("Single AP","Single_AP()")
+xbutton("50 Hz train","Train()")
+xpanel()
+a.intercept(0)
+a.map()
+
+load_file("fig4_modeldb.ses")
